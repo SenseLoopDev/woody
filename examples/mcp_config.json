@@ -1,0 +1,12 @@
+{
+  "mcpServers": {
+    "woody": {
+      "command": "python",
+      "args": ["-m", "woody.mcp_server"],
+      "env": {
+        "PYTHONPATH": "/absolute/path/to/woody-brain",
+        "WOODY_HOME": "/absolute/path/to/my-experiment"
+      }
+    }
+  }
+}

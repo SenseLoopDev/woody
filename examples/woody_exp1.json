@@ -1,0 +1,42 @@
+{
+  "experiment_id": "woody-exp1",
+  "name": "Woody Experiment 1: backyard woodworking demand test",
+  "question": "Will families reached through local online groups pay $75 (ages 7-10) or $50 (ages 11+) for a one-hour backyard woodworking session?",
+  "hypotheses": [
+    {
+      "id": "H1", "title": "Demand",
+      "metric": {"kind": "booking", "agg": "count", "where": {"paid": true}},
+      "op": ">=", "value": 10, "by": "2026-11-03"
+    },
+    {
+      "id": "H2", "title": "Price by age band",
+      "metric": {"kind": "booking", "agg": "count", "where": {"paid": true}, "group_by": "band"}
+    },
+    {
+      "id": "H3", "title": "Value for money",
+      "metric": {"kind": "survey", "agg": "share", "field": "worth_price", "predicate": {"op": ">=", "value": 4}},
+      "op": ">=", "value": 0.8, "by": "2026-11-09"
+    },
+    {
+      "id": "H4", "title": "Repeat intent",
+      "metric": {"kind": "survey", "agg": "share", "field": "rebook", "predicate": {"op": "==", "value": true}},
+      "op": ">=", "value": 0.6, "by": "2026-11-09"
+    },
+    {
+      "id": "H5", "title": "Best channel",
+      "metric": {"kind": "booking", "agg": "count", "where": {"paid": true}, "group_by": "channel"}
+    },
+    {
+      "id": "H6", "title": "Interest in a 4-week series",
+      "metric": {"kind": "survey", "agg": "share", "field": "series_interest", "predicate": {"op": "==", "value": true}}
+    }
+  ],
+  "decision_rules": [
+    {"outcome": "go", "because": "Seats sold and parents' value rating both met their pass lines.",
+     "all": [{"h": "H1", "op": ">=", "v": 10}, {"h": "H3", "op": ">=", "v": 0.8}]},
+    {"outcome": "stop", "because": "Four or fewer seats sold.",
+     "all": [{"h": "H1", "op": "<=", "v": 4}]}
+  ],
+  "decide_after": "2026-11-09",
+  "default_outcome": "pivot"
+}

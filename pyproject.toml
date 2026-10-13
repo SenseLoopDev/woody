@@ -1,0 +1,16 @@
+[project]
+name = "woody-brain"
+version = "0.1.0"
+description = "Agents plus HydraDB graph memory for designing, running and judging business experiments"
+requires-python = ">=3.10"
+dependencies = ["hydradb-sdk>=2,<3"]
+
+[project.scripts]
+woody = "woody.cli:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+packages = ["woody"]

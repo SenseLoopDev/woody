@@ -1,0 +1,38 @@
+{
+  "experiment_id": "pricing-test",
+  "name": "Subscription box price test: $29 vs $39 a month",
+  "question": "Which monthly price, $29 or $39, earns more from pre-orders, and does the box reach 20 paid pre-orders and $700 a month in total?",
+  "hypotheses": [
+    {
+      "id": "H1", "title": "Paid pre-orders",
+      "metric": {"kind": "booking", "agg": "count", "where": {"paid": true}},
+      "op": ">=", "value": 20, "by": "2026-12-01"
+    },
+    {
+      "id": "H2", "title": "Pre-orders by price",
+      "metric": {"kind": "booking", "agg": "count", "where": {"paid": true}, "group_by": "price"}
+    },
+    {
+      "id": "H3", "title": "Monthly revenue from pre-orders",
+      "metric": {"kind": "booking", "agg": "sum", "field": "price", "where": {"paid": true}},
+      "op": ">=", "value": 700, "by": "2026-12-01"
+    },
+    {
+      "id": "H4", "title": "Pre-orders by ad channel",
+      "metric": {"kind": "booking", "agg": "count", "where": {"paid": true}, "group_by": "channel"}
+    },
+    {
+      "id": "H5", "title": "Would recommend",
+      "metric": {"kind": "survey", "agg": "share", "field": "recommend_score", "predicate": {"op": ">=", "value": 8}},
+      "op": ">=", "value": 0.5
+    }
+  ],
+  "decision_rules": [
+    {"outcome": "go", "because": "Pre-orders, monthly revenue and recommendation all met their pass lines.",
+     "all": [{"h": "H1", "op": ">=", "v": 20}, {"h": "H3", "op": ">=", "v": 700}, {"h": "H5", "op": ">=", "v": 0.5}]},
+    {"outcome": "stop", "because": "Five or fewer paid pre-orders.",
+     "all": [{"h": "H1", "op": "<=", "v": 5}]}
+  ],
+  "decide_after": "2026-12-01",
+  "default_outcome": "pivot"
+}

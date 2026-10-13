@@ -1,0 +1,9 @@
+family_code,session,worth_price,rebook,series_interest
+F01,S1,5,yes,yes
+F02,S1,4,yes,yes
+F03,S1,5,yes,no
+F04,S1,4,yes,yes
+F06,S1,3,no,no
+F07,S2,5,yes,yes
+F08,S2,4,yes,yes
+F09,S2,5,yes,yes

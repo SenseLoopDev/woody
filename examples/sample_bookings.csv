@@ -1,0 +1,13 @@
+family_code,band,price,paid,channel,session,known_family
+F01,7-10,75,true,nextdoor,S1,false
+F02,7-10,75,true,facebook,S1,true
+F03,11+,50,true,nextdoor,S1,false
+F04,7-10,75,true,homeschool_group,S1,false
+F05,11+,50,true,homeschool_group,S1,false
+F06,7-10,75,true,nextdoor,S1,false
+F07,11+,50,true,facebook,S2,true
+F08,7-10,75,true,homeschool_group,S2,false
+F09,7-10,75,true,nextdoor,S2,false
+F10,11+,50,true,homeschool_group,S2,false
+F11,11+,50,true,nextdoor,S2,false
+F12,7-10,75,false,facebook,S2,true

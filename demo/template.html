@@ -1,0 +1,816 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="light dark">
+<title>Woody demo</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --page: #e9edf0; --surface: #fafbfb; --ink: #14191d; --ink2: #424d55; --muted: #5d6972;
+  --hair: rgba(20,25,29,.14); --grid: #e1e5e8; --axis: #c3cacf; --wash: rgba(20,25,29,.04);
+  --tape: #f2c500; --tape-ink: #1c1b14; --hit: rgba(242,197,0,.22);
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --track: #cfe0f6;
+  --good: #0ca30c; --warn: #fab219; --crit: #d03b3b; --focus: #2a78d6;
+  --display: "Barlow Condensed", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body: "Public Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --page: #101417; --surface: #1a1f24; --ink: #eef1f3; --ink2: #b8c2c9; --muted: #98a4ac;
+    --hair: rgba(255,255,255,.14); --grid: #2a3138; --axis: #3a434b; --wash: rgba(255,255,255,.05);
+    --hit: rgba(242,197,0,.16); --s1: #3987e5; --s2: #d95926; --s3: #199e70; --track: #26394f; --focus: #6da7ec;
+  }
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--page); color: var(--ink); font: 400 16px/1.5 var(--body); }
+h1, h2, h3, h4, p { margin: 0; }
+button, input, select { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+.wrap { max-width: 1120px; margin: 0 auto; padding: 0 16px; }
+svg.i { width: 1em; height: 1em; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+/* header */
+.top { padding: 28px 0 20px; display: flex; flex-wrap: wrap; gap: 16px 32px; align-items: end; justify-content: space-between; }
+.brand h1 { font: 700 56px/0.95 var(--display); letter-spacing: .01em; }
+.brand p { color: var(--ink2); margin-top: 6px; max-width: 46ch; }
+.switch { display: inline-flex; border: 1px solid var(--hair); background: var(--surface); border-radius: 999px; padding: 3px; }
+.switch button { border: 0; background: none; padding: 7px 16px; border-radius: 999px; font-weight: 500; color: var(--ink2); }
+.switch button[aria-pressed="true"] { background: var(--ink); color: var(--surface); }
+.sample { display: inline-flex; gap: 8px; align-items: center; font-size: 13px; color: var(--muted); margin-top: 10px; }
+
+/* time bar */
+.timebar { position: sticky; top: 0; z-index: 5; background: var(--surface); border-block: 1px solid var(--hair); }
+.tb-head { display: flex; flex-wrap: wrap; gap: 8px 24px; align-items: center; justify-content: space-between; padding: 10px 0 4px; }
+.tb-date { display: flex; align-items: baseline; gap: 10px; }
+.tb-date .lab { color: var(--muted); font-size: 14px; }
+.tb-date strong { font: 700 30px/1 var(--display); letter-spacing: .01em; }
+.tb-date .day { color: var(--muted); font-size: 14px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--hair); background: var(--surface); border-radius: 999px; padding: 4px 12px; font-size: 14px; display: inline-flex; gap: 6px; align-items: baseline; }
+.chip small { color: var(--muted); font-size: 12px; }
+button.chip:hover { background: var(--wash); }
+button.chip[aria-pressed="true"] { border-color: var(--ink); background: var(--ink); color: var(--surface); }
+button.chip[aria-pressed="true"] small { color: inherit; opacity: .8; }
+.ruler { position: relative; height: 62px; padding: 0 14px; touch-action: none; cursor: ew-resize; outline-offset: -2px; user-select: none; }
+.track { position: absolute; left: 14px; right: 14px; top: 10px; height: 34px; }
+.tape { position: absolute; inset: 0 -14px; background: var(--tape); border-radius: 2px; box-shadow: inset 0 -2px 0 rgba(0,0,0,.18); }
+.tick { position: absolute; top: 0; width: 1px; background: var(--tape-ink); transform: translateX(-.5px); height: 9px; }
+.tick.wk { height: 17px; width: 2px; }
+.tlab { position: absolute; top: 17px; font: 700 12px/1 var(--display); letter-spacing: .04em; color: var(--tape-ink); transform: translateX(-50%); white-space: nowrap; }
+.flag { position: absolute; bottom: 0; width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid var(--tape-ink); transform: translateX(-50%); }
+.veil { position: absolute; top: 0; bottom: 0; right: -14px; background: var(--surface); opacity: .62; pointer-events: none; }
+.needle { position: absolute; top: -8px; bottom: -8px; width: 3px; margin-left: -1.5px; background: var(--ink); pointer-events: none; }
+.needle::before { content: ""; position: absolute; top: -1px; left: -6px; border: 7.5px solid transparent; border-top: 9px solid var(--ink); border-bottom: 0; }
+.ruler:focus-visible .needle { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tb-note { color: var(--muted); font-size: 13px; padding: 0 0 8px; min-height: 1.6em; }
+
+/* sections */
+main > section { padding: 28px 0; border-bottom: 1px solid var(--hair); }
+main > section:last-child { border-bottom: 0; }
+h2 { font: 700 30px/1.05 var(--display); letter-spacing: .01em; margin-bottom: 4px; }
+.lede { color: var(--ink2); max-width: 70ch; margin-bottom: 16px; }
+.cols { display: grid; gap: 28px 40px; grid-template-columns: 1fr; }
+@media (min-width: 900px) { .cols.two { grid-template-columns: 1fr 1fr; } .cols.verdict { grid-template-columns: minmax(0,5fr) minmax(0,6fr); } }
+
+/* verdict */
+.verdict-box { border-left: 8px solid var(--rail, var(--muted)); padding: 4px 0 4px 20px; }
+.v-word { display: flex; align-items: center; gap: 14px; }
+.v-word .big { font: 700 112px/.85 var(--display); letter-spacing: .01em; }
+.v-word svg { width: 56px; height: 56px; color: var(--rail); }
+.v-state { margin: 14px 0 8px; display: flex; gap: 8px; flex-wrap: wrap; }
+.tag { display: inline-flex; gap: 6px; align-items: center; border: 1px solid var(--hair); border-radius: 999px; padding: 2px 10px; font-size: 13px; font-weight: 500; }
+.tag svg { width: 14px; height: 14px; }
+.because { max-width: 46ch; color: var(--ink2); }
+.question { font-size: 18px; max-width: 52ch; margin: 4px 0 18px; }
+.rule { margin: 0 0 16px; }
+.rule h3 { font: 600 17px/1.2 var(--body); margin-bottom: 6px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.cond { display: grid; grid-template-columns: 20px 1fr auto; gap: 8px; padding: 5px 0; border-top: 1px solid var(--hair); font-size: 15px; align-items: center; }
+.cond svg { width: 16px; height: 16px; }
+.cond .now { font-variant-numeric: tabular-nums; font-weight: 600; }
+.ok { color: var(--good); } .no { color: var(--crit); } .na { color: var(--muted); }
+
+/* scoreboard */
+.rows { border-top: 1px solid var(--hair); }
+.hrow { display: block; width: 100%; text-align: left; background: none; border: 0; border-bottom: 1px solid var(--hair); padding: 14px 8px 14px 10px; border-left: 4px solid transparent; }
+.hrow:hover { background: var(--wash); }
+.hrow[aria-pressed="true"] { border-left-color: var(--tape); background: var(--hit); }
+.hgrid { display: grid; gap: 6px 16px; grid-template-columns: 44px minmax(0,1.3fr) minmax(90px,.6fr) minmax(0,1.6fr) 130px; align-items: center; }
+@media (max-width: 760px) { .hgrid { grid-template-columns: 40px 1fr auto; } .hgrid .gauge, .hgrid .bars { grid-column: 1 / -1; } }
+.hid { font: 700 18px/1 var(--display); border: 1px solid var(--hair); border-radius: 3px; padding: 4px 0; text-align: center; background: var(--surface); }
+.htitle { font-weight: 600; }
+.hsub { color: var(--muted); font-size: 13px; }
+.hval { font: 700 36px/1 var(--display); }
+.hval small { font: 400 13px var(--body); color: var(--muted); margin-left: 4px; }
+.gauge { position: relative; height: 10px; background: var(--track); border-radius: 4px; }
+.gauge .fill { position: absolute; left: 0; top: 0; bottom: 0; background: var(--s1); border-radius: 4px 4px 4px 4px; min-width: 0; }
+.gauge .pass { position: absolute; top: -5px; bottom: -5px; width: 2px; background: var(--ink); }
+.status { display: inline-flex; gap: 6px; align-items: center; font-weight: 600; font-size: 14px; }
+.status svg { width: 18px; height: 18px; }
+.flags { grid-column: 2 / -1; display: grid; gap: 2px; }
+.flagline { display: flex; gap: 6px; align-items: center; font-size: 13px; color: var(--ink2); }
+.flagline svg { width: 14px; height: 14px; color: var(--warn); }
+@media (max-width: 760px) { .flags { grid-column: 1 / -1; } }
+.bars { display: grid; gap: 6px; }
+.bar { display: grid; grid-template-columns: 128px 1fr 72px; gap: 8px; align-items: center; font-size: 14px; }
+.bar .b { height: 16px; display: block; }
+.bar .b i { display: block; height: 100%; border-radius: 0 4px 4px 0; }
+.bar .num { font-weight: 600; font-variant-numeric: tabular-nums; }
+.bar .num small { color: var(--muted); font-weight: 400; }
+.sw { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 6px; }
+
+/* chart */
+.tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 10px; }
+.chartbox { position: relative; background: var(--surface); border: 1px solid var(--hair); border-radius: 6px; padding: 8px 8px 4px; }
+.chartbox svg { display: block; width: 100%; height: auto; overflow: visible; }
+.chartbox:focus-visible { outline: 2px solid var(--focus); }
+.tip { position: absolute; pointer-events: none; background: var(--surface); border: 1px solid var(--hair); border-radius: 6px; padding: 8px 10px; box-shadow: 0 4px 14px rgba(0,0,0,.14); font-size: 13px; min-width: 130px; transform: translate(-50%, 0); z-index: 2; }
+.tip .tv { font: 700 22px/1 var(--display); display: flex; gap: 8px; align-items: center; }
+.tip .key { width: 14px; height: 0; border-top: 2px solid var(--s1); display: inline-block; }
+.tip .tl { color: var(--ink2); }
+.tip .td { color: var(--muted); margin-top: 2px; }
+.viewswitch { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.ctitle { font-weight: 600; }
+.csub { color: var(--muted); font-size: 13px; }
+.scroll { overflow-x: auto; border: 1px solid var(--hair); background: var(--surface); border-radius: 6px; }
+table { border-collapse: collapse; width: 100%; font-size: 14px; }
+th, td { text-align: left; padding: 7px 12px; border-bottom: 1px solid var(--hair); vertical-align: top; }
+th { font-weight: 600; color: var(--ink2); white-space: nowrap; background: var(--wash); position: sticky; top: 0; }
+td.n, th.n { text-align: right; font-variant-numeric: tabular-nums; }
+tr.hit td { background: var(--hit); }
+tr.hit td:first-child { box-shadow: inset 4px 0 0 var(--tape); }
+td.id { font-weight: 600; white-space: nowrap; }
+td.txt { min-width: 220px; }
+.badge { font-size: 12px; border: 1px solid var(--hair); border-radius: 999px; padding: 0 8px; margin-left: 6px; color: var(--ink2); white-space: nowrap; }
+.maxh { max-height: 380px; overflow: auto; }
+.banner { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 0 0 10px; font-size: 14px; }
+.link { background: none; border: 0; color: var(--ink); text-decoration: underline; padding: 0; }
+
+/* forms */
+form.f { display: grid; gap: 12px; max-width: 460px; }
+label.fl { display: grid; gap: 4px; font-size: 14px; font-weight: 500; }
+select, input[type="text"] { border: 1px solid var(--hair); background: var(--surface); border-radius: 4px; padding: 8px 10px; min-height: 40px; width: 100%; }
+.check { display: flex; gap: 8px; align-items: center; font-size: 14px; font-weight: 500; }
+.check input { width: 18px; height: 18px; }
+.btn { border: 1px solid var(--ink); background: var(--ink); color: var(--surface); border-radius: 4px; padding: 9px 16px; font-weight: 600; min-height: 40px; }
+.btn.alt { background: none; color: var(--ink); border-color: var(--hair); }
+.btn:hover { filter: brightness(1.15); }
+.btn.alt:hover { background: var(--wash); filter: none; }
+.btnrow { display: flex; gap: 8px; flex-wrap: wrap; }
+.live { min-height: 3em; margin-top: 12px; font-size: 14px; color: var(--ink2); max-width: 60ch; }
+.live b { color: var(--ink); }
+
+/* ask */
+.askrow { display: flex; gap: 8px; margin-bottom: 8px; }
+.askrow input { flex: 1; }
+.hits { display: grid; gap: 10px; margin-top: 14px; }
+.hit-card { border-left: 3px solid var(--axis); padding: 2px 0 2px 12px; }
+.hit-card.mem { border-left-color: var(--s2); }
+.hit-head { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 2px; font-size: 13px; color: var(--muted); }
+.hit-head b { color: var(--ink); font-size: 14px; }
+.hit-card p { font-size: 14px; color: var(--ink2); white-space: pre-line; }
+mark { background: var(--hit); color: inherit; border-radius: 2px; box-shadow: 0 0 0 1px var(--hit); }
+.note { font-size: 13px; color: var(--muted); max-width: 64ch; margin-top: 10px; }
+.real { margin-top: 20px; border: 1px solid var(--hair); border-radius: 6px; background: var(--surface); padding: 14px 16px; max-width: 64ch; }
+.real h3 { font: 600 15px/1.3 var(--body); margin-bottom: 4px; }
+.real .q { color: var(--ink2); font-size: 14px; }
+.real ol { margin: 10px 0 0; padding: 0; list-style: none; display: grid; gap: 6px; font-size: 14px; }
+.real li { display: grid; grid-template-columns: 52px 1fr; gap: 10px; align-items: baseline; }
+.real li b { font-variant-numeric: tabular-nums; }
+.real li.lo { color: var(--muted); }
+
+/* message */
+.md { max-width: 74ch; background: var(--surface); border: 1px solid var(--hair); border-radius: 6px; padding: 16px 20px; }
+.md h3 { font: 700 24px/1.1 var(--display); margin-bottom: 8px; }
+.md h4 { font: 600 16px/1.3 var(--body); margin: 14px 0 6px; }
+.md p { margin: 0 0 8px; }
+.md .li { position: relative; padding-left: 16px; margin: 0 0 6px; }
+.md .li::before { content: ""; position: absolute; left: 2px; top: .62em; width: 6px; height: 6px; border-radius: 1px; background: var(--axis); }
+
+/* roles */
+.roles { display: grid; gap: 20px 24px; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); margin-top: 8px; }
+.role { border-top: 3px solid var(--ink); padding-top: 10px; }
+.role h3 { font: 700 22px/1 var(--display); margin-bottom: 4px; letter-spacing: .01em; }
+.role p { font-size: 14px; color: var(--ink2); }
+.role code { display: block; font: 12px/1.4 ui-monospace, Menlo, Consolas, monospace; color: var(--muted); margin-top: 6px; word-break: break-word; }
+footer { padding: 28px 0 56px; color: var(--muted); font-size: 13px; max-width: 80ch; }
+@media (max-width: 560px) { .brand h1 { font-size: 46px; } .v-word .big { font-size: 88px; } .v-word svg { width: 44px; height: 44px; } .tb-date strong { font-size: 24px; } }
+@media (prefers-reduced-motion: no-preference) { .hrow, button.chip, .btn { transition: background-color .12s, border-color .12s; } }
+@media print { .timebar { position: static; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Woody</h1>
+      <p>An experiment brain: it keeps the data, checks it against the pass lines you set, and says go, pivot or stop.</p>
+      <div class="sample" id="sampleNote"></div>
+    </div>
+    <div class="switch" role="group" aria-label="Choose a sample experiment" id="expSwitch"></div>
+  </header>
+</div>
+
+<div class="timebar" id="timebar">
+  <div class="wrap">
+    <div class="tb-head">
+      <div class="tb-date"><span class="lab">Showing the brain as of</span><strong id="tbDate"></strong><span class="day" id="tbDay"></span></div>
+      <div class="chips" id="presets" role="group" aria-label="Jump to a date"></div>
+    </div>
+    <div class="ruler" id="ruler" role="slider" tabindex="0" aria-label="Date the brain is viewed at"></div>
+    <div class="tb-note" id="tbNote"></div>
+  </div>
+</div>
+
+<main class="wrap">
+  <section aria-labelledby="hVerdict">
+    <div class="cols verdict">
+      <div>
+        <h2 id="hVerdict">The call</h2>
+        <div class="verdict-box" id="verdict"></div>
+      </div>
+      <div id="question"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="hScore">
+    <h2 id="hScore">Hypotheses against their pass lines</h2>
+    <p class="lede">Each hypothesis has a number, a pass line and sometimes a deadline. Pick one to see the exact records behind its number.</p>
+    <div class="rows" id="score"></div>
+  </section>
+
+  <section aria-labelledby="hChart">
+    <h2 id="hChart">Progress over time</h2>
+    <div id="chart"></div>
+  </section>
+
+  <section aria-labelledby="hData">
+    <h2 id="hData">The records</h2>
+    <p class="lede">Everything the brain knows is a record with an id and links to other records. These are the ones dated on or before the day above.</p>
+    <div id="evidence"></div>
+  </section>
+
+  <section aria-labelledby="hTry">
+    <div class="cols two">
+      <div>
+        <h2 id="hTry">Add data and watch the call move</h2>
+        <p class="lede" id="addLede"></p>
+        <form class="f" id="addForm"></form>
+        <p class="live" id="addLive" role="status" aria-live="polite"></p>
+      </div>
+      <div>
+        <h2 id="hAsk">Ask the brain</h2>
+        <p class="lede">Ask a plain question. The brain answers from the records it has as of the day above.</p>
+        <form class="askrow" id="askForm" role="search">
+          <label class="sr" for="askQ">Question</label>
+          <input type="text" id="askQ" autocomplete="off" placeholder="What did kids think of the pulley toy?">
+          <button class="btn" type="submit">Ask</button>
+        </form>
+        <div class="chips" id="askEx"></div>
+        <div class="hits" id="hits" aria-live="polite"></div>
+        <p class="note">This page uses Woody's offline stand-in, which matches words. With a HydraDB key the same question follows the links between records and ranks by meaning.</p>
+        <div class="real">
+          <h3>The same kind of question on live HydraDB</h3>
+          <p class="q">Asked of the pilot's own brain during setup: &ldquo;what did kids think of the pulley toy&rdquo;. It returned 10 results from 10 sources.</p>
+          <ol>
+            <li><b>0.89</b><span>Memory: Kids loved the pulley toy (is for session S1; is about H3)</span></li>
+            <li class="lo"><b>0.32&ndash;0.36</b><span>The other nine were survey and metric records, far less relevant.</span></li>
+          </ol>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section aria-labelledby="hMon">
+    <h2 id="hMon">What Woody would send you</h2>
+    <p class="lede">The weekly review is the Analyst's message. The conclusion is the Concluder's draft, and it stays marked provisional until the charter's final-call date.</p>
+    <div class="tabs" id="monTabs" role="group" aria-label="Message type"></div>
+    <div id="mon"></div>
+  </section>
+
+  <section aria-labelledby="hRoles">
+    <h2 id="hRoles">Who does what</h2>
+    <p class="lede">You approve the charter, drop in a spreadsheet or a voice note, and make the final call. The roles below do the rest.</p>
+    <div class="roles">
+      <div class="role"><h3>Framer</h3><p>Turns an idea into hypotheses, pass lines and decision rules, and refuses a charter with gaps.</p><code>woody_init_experiment</code></div>
+      <div class="role"><h3>Collector</h3><p>Takes bookings, surveys, notes and photos with consent, and links each to the session and family code.</p><code>woody_add_records, woody_import_csv, woody_log_note, woody_register_photo</code></div>
+      <div class="role"><h3>Analyst</h3><p>Computes every number exactly in code and flags thin or missing evidence.</p><code>woody_review</code></div>
+      <div class="role"><h3>Concluder</h3><p>Writes go, pivot or stop. Every claim lists the records behind it.</p><code>woody_conclude</code></div>
+      <div class="role"><h3>Memory keeper</h3><p>Answers &ldquo;why&rdquo; from connected context in HydraDB, not from guesses.</p><code>woody_ask</code></div>
+    </div>
+  </section>
+
+  <footer>
+    All names, families and numbers on this page are made up. The figures come from a JavaScript copy of Woody's analysis engine; a test runs it against the Python engine on every day of both experiments and requires identical numbers, flags, decisions and report text. Records you add here live only in this browser tab.
+  </footer>
+</main>
+
+<script>/*__DATA__*/</script>
+<script>/*__ENGINE__*/</script>
+<script>
+(function () {
+  "use strict";
+  var E = WoodyEngine, D = window.WOODY_DATA.experiments;
+  var KIND_ORDER = ["booking", "survey", "post", "session", "observation", "photo", "incident", "cost", "learning", "decision"];
+  var KIND_LABEL = { booking: "Bookings", survey: "Surveys", post: "Posts", session: "Sessions", observation: "Notes", photo: "Photos", incident: "Incidents", cost: "Costs", learning: "Learnings", decision: "Decisions" };
+  var SERIES = ["var(--s1)", "var(--s2)", "var(--s3)"];
+  var CONSENT = { A: "A: records only", B: "B: shareable", C: "C: no photos of child" };
+  var OPSYM = { ">=": "≥", "<=": "≤", ">": ">", "<": "<", "==": "=", "!=": "≠" };
+  var state = { exp: 0, asof: D[0].default_asof, sel: null, chartHyp: D[0].chart_default, chartView: "chart", tab: "booking", added: {}, mon: "review", ask: "", hoverDay: null };
+
+  /* ---------- helpers ---------- */
+  function h(tag, attrs) {
+    var el = document.createElement(tag), k, v, i, kids = Array.prototype.slice.call(arguments, 2);
+    for (k in (attrs || {})) {
+      v = attrs[k];
+      if (v === null || v === undefined || v === false) continue;
+      if (k === "class") el.className = v;
+      else if (k === "text") el.textContent = v;
+      else if (k.slice(0, 2) === "on") el.addEventListener(k.slice(2), v);
+      else el.setAttribute(k, v === true ? "" : v);
+    }
+    (function add(list) {
+      list.forEach(function (c) {
+        if (c === null || c === undefined || c === false) return;
+        if (Array.isArray(c)) return add(c);
+        el.appendChild(c.nodeType ? c : document.createTextNode(String(c)));
+      });
+    })(kids);
+    return el;
+  }
+  var NS = "http://www.w3.org/2000/svg";
+  function s(tag, attrs) {
+    var el = document.createElementNS(NS, tag), k;
+    for (k in (attrs || {})) if (attrs[k] !== null && attrs[k] !== undefined) el.setAttribute(k, attrs[k]);
+    Array.prototype.slice.call(arguments, 2).forEach(function (c) { if (c) el.appendChild(typeof c === "string" ? document.createTextNode(c) : c); });
+    return el;
+  }
+  var PATHS = {
+    check: "M3 8.5l3.2 3.2L13 4.5", cross: "M4 4l8 8M12 4l-8 8", dash: "M4 8h8",
+    flag: "M4 14V2.5M4 3h8l-2 3 2 3H4", hourglass: "M4 2h8M4 14h8M5 2c0 4 6 4 6 6s-6 2-6 6M11 2c0 4-6 4-6 6s6 2 6 6",
+    pivot: "M2.5 5.5h9.5l-3-3M13.5 10.5H4l3 3", stop: "M4 4h8v8H4z", bars: "M3 13V8M8 13V3M13 13V6", lock: "M4 7h8v6H4zM5.5 7V5a2.5 2.5 0 0 1 5 0v2"
+  };
+  function icon(name, cls) {
+    return s("svg", { "class": "i" + (cls ? " " + cls : ""), viewBox: "0 0 16 16", "aria-hidden": "true", focusable: "false" }, s("path", { d: PATHS[name] }));
+  }
+  function dlabel(iso, long) {
+    var d = new Date(iso + "T00:00:00Z");
+    return d.toLocaleDateString("en-US", long ? { weekday: "short", month: "short", day: "numeric", timeZone: "UTC" } : { month: "short", day: "numeric", timeZone: "UTC" });
+  }
+  function cur() { return D[state.exp]; }
+  function allRecords() { return cur().records.concat(state.added[cur().id] || []); }
+  function visible() { return E.visibleAt(allRecords(), state.asof); }
+  function hyp(id) { return cur().charter.hypotheses.filter(function (x) { return x.id === id; })[0]; }
+  function money(metric) { return metric && (metric.field === "price" || metric.field === "amount") ? "$" : ""; }
+  function val(v, metric) { return v === null || v === undefined ? "–" : (metric.agg === "share" ? E.fmt(v, metric) : money(metric) + E.fmt(v, metric)); }
+  function groupName(metric, g) { return metric.group_by === "price" ? "$" + g : g.replace(/_/g, " "); }
+  function analysis() {
+    var c = cur().charter, recs = visible(), results = E.evaluate(c, recs, state.asof);
+    return { results: results, decision: E.decide(c, results, state.asof), recs: recs };
+  }
+  var STATUS = {
+    pass: { label: "Pass", icon: "check", cls: "ok" }, miss: { label: "Miss", icon: "cross", cls: "no" },
+    no_data: { label: "No data yet", icon: "dash", cls: "na" }, report: { label: "Report only", icon: "bars", cls: "na" }
+  };
+  var OUTCOME = {
+    go: { icon: "check", color: "var(--good)", name: "Go" }, pivot: { icon: "pivot", color: "var(--warn)", name: "Pivot" },
+    stop: { icon: "stop", color: "var(--crit)", name: "Stop" }
+  };
+
+  /* ---------- header and time bar ---------- */
+  function buildHeader() {
+    var sw = document.getElementById("expSwitch");
+    sw.textContent = "";
+    D.forEach(function (e, i) {
+      sw.appendChild(h("button", { type: "button", "aria-pressed": String(i === state.exp), text: e.label, onclick: function () { selectExp(i); } }));
+    });
+    document.getElementById("sampleNote").textContent = "Sample data. Every family and number here is made up.";
+  }
+  var ruler = { n: 0, days: [] };
+  function buildRuler() {
+    var e = cur(), el = document.getElementById("ruler");
+    ruler.days = [];
+    for (var d = e.start; d <= e.end; d = E.addDays(d, 1)) ruler.days.push(d);
+    ruler.n = ruler.days.length;
+    el.textContent = "";
+    var track = h("div", { "class": "track" });
+    track.appendChild(h("div", { "class": "tape" }));
+    ruler.days.forEach(function (d, i) {
+      var wk = i % 7 === 0, left = (i / (ruler.n - 1) * 100) + "%";
+      track.appendChild(h("span", { "class": "tick" + (wk ? " wk" : ""), style: "left:" + left }));
+      if (wk) track.appendChild(h("span", { "class": "tlab", style: "left:" + left, text: dlabel(d) }));
+    });
+    e.milestones.forEach(function (m) {
+      var i = ruler.days.indexOf(m.date);
+      if (i >= 0) track.appendChild(h("span", { "class": "flag", style: "left:" + (i / (ruler.n - 1) * 100) + "%", title: dlabel(m.date) + ": " + m.label }));
+    });
+    track.appendChild(h("div", { "class": "veil", id: "veil" }));
+    track.appendChild(h("div", { "class": "needle", id: "needle" }));
+    el.appendChild(track);
+    el.setAttribute("aria-valuemin", "0");
+    el.setAttribute("aria-valuemax", String(ruler.n - 1));
+    var pre = document.getElementById("presets");
+    pre.textContent = "";
+    e.presets.forEach(function (p) {
+      pre.appendChild(h("button", { type: "button", "class": "chip", "data-date": p.date, onclick: function () { setAsof(p.date); } }, p.label, h("small", { text: dlabel(p.date) })));
+    });
+  }
+  function idxOf(d) { return Math.max(0, Math.min(ruler.n - 1, ruler.days.indexOf(d))); }
+  function setAsof(d) {
+    if (ruler.days.indexOf(d) < 0) return;
+    state.asof = d; state.hoverDay = null;
+    render();
+  }
+  function paintRuler() {
+    var i = idxOf(state.asof), pct = i / (ruler.n - 1) * 100;
+    var needle = document.getElementById("needle"), veil = document.getElementById("veil"), el = document.getElementById("ruler");
+    needle.style.left = pct + "%";
+    veil.style.left = pct + "%";
+    el.setAttribute("aria-valuenow", String(i));
+    el.setAttribute("aria-valuetext", dlabel(state.asof, true));
+    document.getElementById("tbDate").textContent = dlabel(state.asof, true);
+    document.getElementById("tbDay").textContent = "day " + (i + 1) + " of " + ruler.n;
+    Array.prototype.forEach.call(document.querySelectorAll("#presets .chip"), function (b) {
+      b.setAttribute("aria-pressed", String(b.getAttribute("data-date") === state.asof));
+    });
+    var all = allRecords(), later = all.length - visible().length;
+    var ms = cur().milestones.filter(function (m) { return m.date === state.asof; })[0];
+    document.getElementById("tbNote").textContent = (ms ? ms.label + ". " : "") + (later ? later + " later " + (later === 1 ? "record is" : "records are") + " hidden until you move the date forward." : "All records are showing.");
+  }
+  function bindRuler() {
+    var el = document.getElementById("ruler");
+    function fromX(x) {
+      var r = el.querySelector(".track").getBoundingClientRect();
+      var i = Math.round((x - r.left) / r.width * (ruler.n - 1));
+      setAsof(ruler.days[Math.max(0, Math.min(ruler.n - 1, i))]);
+    }
+    el.onpointerdown = function (ev) { el.setPointerCapture(ev.pointerId); el.focus({ preventScroll: true }); fromX(ev.clientX); };
+    el.onpointermove = function (ev) { if (el.hasPointerCapture(ev.pointerId)) fromX(ev.clientX); };
+    el.onkeydown = function (ev) {
+      var i = idxOf(state.asof), step = { ArrowLeft: -1, ArrowDown: -1, ArrowRight: 1, ArrowUp: 1, PageDown: -7, PageUp: 7 }[ev.key];
+      if (ev.key === "Home") i = 0; else if (ev.key === "End") i = ruler.n - 1; else if (step) i += step; else return;
+      ev.preventDefault();
+      setAsof(ruler.days[Math.max(0, Math.min(ruler.n - 1, i))]);
+    };
+  }
+
+  /* ---------- verdict and rules ---------- */
+  function condRow(c, results) {
+    var r = results.filter(function (x) { return x.id === c.h; })[0], hy = hyp(c.h), v = r && r.value !== undefined ? r.value : null;
+    var met = v !== null && v !== undefined && ({ ">=": v >= c.v, ">": v > c.v, "<=": v <= c.v, "<": v < c.v, "==": v === c.v, "!=": v !== c.v })[c.op];
+    var st = v === null || v === undefined ? ["na", "dash", "no data yet"] : met ? ["ok", "check", "met"] : ["no", "cross", "not met"];
+    return h("div", { "class": "cond" },
+      h("span", { "class": st[0], title: st[2] }, icon(st[1])),
+      h("span", null, c.h + " " + hy.title + " " + OPSYM[c.op] + " " + val(c.v, hy.metric), h("span", { "class": "sr", text: " (" + st[2] + ")" })),
+      h("span", { "class": "now", text: val(v, hy.metric) }));
+  }
+  function renderVerdict(a) {
+    var c = cur().charter, d = a.decision, o = OUTCOME[d.outcome];
+    var box = document.getElementById("verdict");
+    box.style.setProperty("--rail", o.color);
+    box.textContent = "";
+    box.appendChild(h("div", { "class": "v-word" }, icon(o.icon), h("span", { "class": "big", text: d.outcome.toUpperCase() })));
+    box.appendChild(h("div", { "class": "v-state" },
+      d.final ? h("span", { "class": "tag" }, icon("lock"), "Final call") : h("span", { "class": "tag" }, icon("hourglass"), "Provisional until " + dlabel(c.decide_after)),
+      h("span", { "class": "tag", text: a.recs.length + " records" })));
+    box.appendChild(h("p", { "class": "because", text: d.because + (d.final ? "" : " It is provisional, so Woody will not save it as a decision yet.") }));
+    var q = document.getElementById("question");
+    q.textContent = "";
+    q.appendChild(h("h2", { text: c.name }));
+    q.appendChild(h("p", { "class": "question", text: c.question }));
+    c.decision_rules.forEach(function (rule) {
+      var matched = d.rule === rule.all;
+      q.appendChild(h("div", { "class": "rule" },
+        h("h3", null, (rule.outcome === "go" ? "Go when all of these hold" : rule.outcome === "stop" ? "Stop when" : "Pivot when all hold"),
+          matched ? h("span", { "class": "tag" }, icon("check"), "Rule matched") : null),
+        rule.all.map(function (cd) { return condRow(cd, a.results); })));
+    });
+    q.appendChild(h("p", { "class": "note", text: "If no rule matches, the call is " + (c.default_outcome || "pivot").toUpperCase() + "." }));
+  }
+
+  /* ---------- scoreboard ---------- */
+  function renderScore(a) {
+    var c = cur().charter, box = document.getElementById("score");
+    box.textContent = "";
+    a.results.forEach(function (r, i) {
+      var hy = c.hypotheses[i], st = STATUS[r.status], m = hy.metric, line;
+      var target = "op" in hy ? "Pass line " + OPSYM[hy.op] + " " + val(hy.value, m) + (hy.by ? " by " + dlabel(hy.by) : "") : (r.groups ? "Report by " + m.group_by : "Report only");
+      var cells = [
+        h("span", { "class": "hid", text: r.id }),
+        h("span", null, h("span", { "class": "htitle", text: r.title }), h("br"), h("span", { "class": "hsub", text: target })),
+        r.groups ? h("span", { "class": "hsub", text: r.evidence.length + " records" }) :
+          h("span", { "class": "hval" }, val(r.value, m), m.agg === "share" && r.n ? h("small", { text: "of " + r.n }) : null),
+        r.groups ? groupBars(r, m) : gauge(r, hy),
+        h("span", { "class": "status " + st.cls }, icon(st.icon), st.label)
+      ];
+      if (r.groups) cells = [cells[0], cells[1], cells[2], cells[3], cells[4]];
+      var grid = h("div", { "class": "hgrid" }, cells);
+      if (r.flags.length) grid.appendChild(h("div", { "class": "flags" }, r.flags.map(function (f) { return h("span", { "class": "flagline" }, icon("flag"), f); })));
+      box.appendChild(h("button", {
+        type: "button", "class": "hrow", "aria-pressed": String(state.sel === r.id),
+        "aria-label": r.id + " " + r.title + ". Show its records.",
+        onclick: function () { state.sel = state.sel === r.id ? null : r.id; if (state.sel) state.tab = hy.metric.kind; renderEvidence(a); renderScoreMarks(); document.getElementById("hData").scrollIntoView({ block: "start", behavior: "smooth" }); }
+      }, grid));
+    });
+  }
+  function renderScoreMarks() {
+    Array.prototype.forEach.call(document.querySelectorAll(".hrow"), function (b, i) {
+      b.setAttribute("aria-pressed", String(state.sel === cur().charter.hypotheses[i].id));
+    });
+  }
+  function gauge(r, hy) {
+    var m = hy.metric, v = r.value, max;
+    if (m.agg === "share") max = 1; else max = Math.max(("value" in hy ? hy.value : 0) * 1.25, (v || 0) * 1.05, 1);
+    var g = h("span", { "class": "gauge", role: "img", "aria-label": v === null ? "No data yet" : val(v, m) + (("value" in hy) ? " against a pass line of " + val(hy.value, m) : "") });
+    if (v !== null && v !== undefined) g.appendChild(h("i", { "class": "fill", style: "width:" + Math.min(100, v / max * 100) + "%" }));
+    if ("value" in hy) g.appendChild(h("i", { "class": "pass", style: "left:calc(" + (Math.min(1, hy.value / max) * 100) + "% - 1px)" }));
+    return g;
+  }
+  function groupBars(r, m) {
+    var max = Math.max.apply(null, r.groups.map(function (g) { return g[1] || 0; }).concat([1]));
+    return h("span", { "class": "bars" }, r.groups.map(function (g, i) {
+      return h("span", { "class": "bar" },
+        h("span", null, h("i", { "class": "sw", style: "background:" + SERIES[i % 3] }), groupName(m, g[0])),
+        h("span", { "class": "b" }, h("i", { style: "width:" + Math.max(2, (g[1] || 0) / max * 100) + "%;background:" + SERIES[i % 3] })),
+        h("span", { "class": "num" }, val(g[1], m), h("small", { text: " (n=" + g[2].length + ")" })));
+    }));
+  }
+
+  /* ---------- chart ---------- */
+  function niceStep(max) {
+    var raw = max / 5, p = Math.pow(10, Math.floor(Math.log10(raw))), f = raw / p;
+    return (f <= 1 ? 1 : f <= 2 ? 2 : f <= 5 ? 5 : 10) * p;
+  }
+  function eligible() {
+    return cur().charter.hypotheses.filter(function (x) { return "op" in x && !("group_by" in x.metric) && (x.metric.agg === "count" || x.metric.agg === "sum"); });
+  }
+  function renderChart() {
+    var box = document.getElementById("chart"), el = eligible();
+    box.textContent = "";
+    if (!el.length) return;
+    if (!el.some(function (x) { return x.id === state.chartHyp; })) state.chartHyp = el[0].id;
+    var hy = hyp(state.chartHyp), m = hy.metric, recs = allRecords();
+    var days = ruler.days.filter(function (d) { return d <= state.asof; });
+    var series = E.dailySeries(m, recs, days);
+    var tabs = h("div", { "class": "tabs", role: "group", "aria-label": "Measure" }, el.map(function (x) {
+      return h("button", { type: "button", "class": "chip", "aria-pressed": String(x.id === state.chartHyp), onclick: function () { state.chartHyp = x.id; renderChart(); } }, x.id + " " + x.title);
+    }));
+    var vs = h("div", { "class": "viewswitch" },
+      h("div", null, h("div", { "class": "ctitle", text: hy.title + ", running total" }),
+        h("div", { "class": "csub", text: "Pass line " + OPSYM[hy.op] + " " + val(hy.value, m) + (hy.by ? " by " + dlabel(hy.by) : "") + ". Records dated after " + dlabel(state.asof) + " are not counted." })),
+      h("div", { "class": "chips", role: "group", "aria-label": "Chart or table" },
+        ["chart", "table"].map(function (v) {
+          return h("button", { type: "button", "class": "chip", "aria-pressed": String(state.chartView === v), text: v === "chart" ? "Chart" : "Table", onclick: function () { state.chartView = v; renderChart(); } });
+        })));
+    box.appendChild(tabs); box.appendChild(vs);
+    if (state.chartView === "table") {
+      var rows = series.filter(function (p, i) { return i === 0 || p.value !== series[i - 1].value || i === series.length - 1; });
+      box.appendChild(h("div", { "class": "scroll maxh" }, h("table", null,
+        h("caption", { "class": "sr", text: hy.title + " by day" }),
+        h("thead", null, h("tr", null, h("th", { text: "Date" }), h("th", { "class": "n", text: "Running total" }), h("th", { "class": "n", text: "Added that day" }))),
+        h("tbody", null, rows.map(function (p) {
+          var prev = series[series.indexOf(p) - 1];
+          return h("tr", null, h("td", { text: dlabel(p.day, true) }), h("td", { "class": "n", text: money(m) + E.fmt(p.value, m) }), h("td", { "class": "n", text: prev ? "+" + E.fmt(p.value - prev.value, m) : "" }));
+        })))));
+      return;
+    }
+    var cbox = h("div", { "class": "chartbox", tabindex: "0", "aria-label": hy.title + " over time. Use left and right arrow keys to read each day." });
+    box.appendChild(cbox);
+    drawChart(cbox, hy, series);
+  }
+  function drawChart(cbox, hy, series) {
+    var m = hy.metric, W = Math.max(320, cbox.clientWidth - 16), H = W < 520 ? 240 : 290;
+    var L = 44, R = 28, T = 22, B = 30;
+    var days = ruler.days, nd = days.length - 1;
+    var vmax = Math.max.apply(null, series.map(function (p) { return p.value; }).concat([hy.value]));
+    var step = niceStep(vmax * 1.12), ymax = Math.ceil(vmax * 1.12 / step) * step;
+    function X(i) { return L + i / nd * (W - L - R); }
+    function Y(v) { return T + (1 - v / ymax) * (H - T - B); }
+    var svg = s("svg", { viewBox: "0 0 " + W + " " + H, width: W, height: H, role: "img", "aria-label": hy.title + " reached " + val(series[series.length - 1].value, m) + " by " + dlabel(state.asof) + " against a pass line of " + val(hy.value, m) });
+    var t;
+    for (t = 0; t <= ymax + 1e-9; t += step) {
+      svg.appendChild(s("line", { x1: L, x2: W - R, y1: Y(t), y2: Y(t), stroke: t === 0 ? "var(--axis)" : "var(--grid)", "stroke-width": 1 }));
+      svg.appendChild(s("text", { x: L - 8, y: Y(t) + 4, "text-anchor": "end", "font-size": 12, fill: "var(--muted)" }, money(m) + E.fmt(t, m)));
+    }
+    days.forEach(function (d, i) {
+      if (i % 7 === 0) svg.appendChild(s("text", { x: X(i), y: H - 8, "text-anchor": i === 0 ? "start" : "middle", "font-size": 12, fill: "var(--muted)" }, dlabel(d)));
+    });
+    var ai = idxOf(state.asof);
+    svg.appendChild(s("rect", { x: X(ai), y: T, width: Math.max(0, W - R - X(ai)), height: H - T - B, fill: "var(--wash)" }));
+    /* pass line and deadline */
+    svg.appendChild(s("line", { x1: L, x2: W - R, y1: Y(hy.value), y2: Y(hy.value), stroke: "var(--ink2)", "stroke-width": 1, "stroke-dasharray": "5 4" }));
+    svg.appendChild(s("text", { x: L + 6, y: Y(hy.value) - 6, "font-size": 12, "font-weight": 600, fill: "var(--ink2)" }, "Pass line " + val(hy.value, m)));
+    var bi = hy.by ? days.indexOf(hy.by) : -1;
+    if (bi >= 0) {
+      svg.appendChild(s("line", { x1: X(bi), x2: X(bi), y1: T, y2: H - B, stroke: "var(--ink2)", "stroke-width": 1 }));
+      svg.appendChild(s("text", { x: X(bi) + (bi > nd * .75 ? -5 : 5), y: T - 7, "text-anchor": bi > nd * .75 ? "end" : "start", "font-size": 12, fill: "var(--ink2)" }, "Deadline " + dlabel(hy.by)));
+    }
+    /* series */
+    var pts = series.map(function (p, i) { return [X(i), Y(p.value)]; });
+    var path = pts.map(function (p, i) { return (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1); }).join(" ");
+    svg.appendChild(s("path", { d: path + " L" + pts[pts.length - 1][0].toFixed(1) + " " + Y(0) + " L" + pts[0][0].toFixed(1) + " " + Y(0) + " Z", fill: "var(--s1)", "fill-opacity": 0.1 }));
+    svg.appendChild(s("path", { d: path, fill: "none", stroke: "var(--s1)", "stroke-width": 2, "stroke-linejoin": "round", "stroke-linecap": "round" }));
+    var last = pts[pts.length - 1], lv = series[series.length - 1].value;
+    svg.appendChild(s("circle", { cx: last[0], cy: last[1], r: 5, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2 }));
+    svg.appendChild(s("text", { x: last[0], y: last[1] - 12, "text-anchor": last[0] > W - R - 20 ? "end" : "middle", "font-size": 14, "font-weight": 700, fill: "var(--ink)" }, money(m) + E.fmt(lv, m)));
+    /* hover layer */
+    var cross = s("g", { visibility: "hidden" }, s("line", { y1: T, y2: H - B, stroke: "var(--ink2)", "stroke-width": 1 }), s("circle", { r: 5, fill: "var(--s1)", stroke: "var(--surface)", "stroke-width": 2 }));
+    svg.appendChild(cross);
+    var hit = s("rect", { x: L, y: 0, width: W - L - R, height: H, fill: "transparent" });
+    svg.appendChild(hit);
+    cbox.textContent = "";
+    cbox.appendChild(svg);
+    var tip = h("div", { "class": "tip", hidden: true });
+    cbox.appendChild(tip);
+    function show(i) {
+      i = Math.max(0, Math.min(series.length - 1, i));
+      var p = series[i], prev = series[i - 1], x = X(i), y = Y(p.value);
+      cross.setAttribute("visibility", "visible");
+      cross.firstChild.setAttribute("x1", x); cross.firstChild.setAttribute("x2", x);
+      cross.lastChild.setAttribute("cx", x); cross.lastChild.setAttribute("cy", y);
+      tip.hidden = false;
+      tip.textContent = "";
+      tip.appendChild(h("div", { "class": "tv" }, h("i", { "class": "key" }), money(m) + E.fmt(p.value, m)));
+      tip.appendChild(h("div", { "class": "tl", text: hy.title + " (running total)" }));
+      tip.appendChild(h("div", { "class": "td", text: dlabel(p.day, true) + (prev && p.value !== prev.value ? ", +" + E.fmt(p.value - prev.value, m) + " that day" : "") }));
+      var sc = cbox.clientWidth / W, tx = Math.max(80, Math.min(cbox.clientWidth - 80, x * sc + 8));
+      tip.style.left = tx + "px"; tip.style.top = Math.max(0, y * sc - 74) + "px";
+      state.hoverDay = i;
+    }
+    function hide() { cross.setAttribute("visibility", "hidden"); tip.hidden = true; }
+    hit.addEventListener("pointermove", function (ev) {
+      var r = svg.getBoundingClientRect(), x = (ev.clientX - r.left) * (W / r.width);
+      show(Math.round((x - L) / (W - L - R) * nd));
+    });
+    hit.addEventListener("pointerleave", hide);
+    cbox.addEventListener("keydown", function (ev) {
+      var i = state.hoverDay === null ? series.length - 1 : state.hoverDay;
+      if (ev.key === "ArrowLeft") i--; else if (ev.key === "ArrowRight") i++; else if (ev.key === "Escape") { hide(); return; } else return;
+      ev.preventDefault(); show(i);
+    });
+    cbox.addEventListener("blur", hide);
+  }
+
+  /* ---------- records ---------- */
+  function cell(key, v) {
+    if (key === "consent") return h("span", { "class": "tag", text: CONSENT[v] || v });
+    if (v === true) return "yes";
+    if (v === false) return "no";
+    return String(v);
+  }
+  function renderEvidence(a) {
+    var box = document.getElementById("evidence"), recs = a.recs, kinds = KIND_ORDER.filter(function (k) { return recs.some(function (r) { return r.kind === k; }); });
+    box.textContent = "";
+    if (kinds.indexOf(state.tab) < 0) state.tab = kinds[0];
+    var res = state.sel ? a.results.filter(function (r) { return r.id === state.sel; })[0] : null, hits = {};
+    if (res) res.evidence.forEach(function (i) { hits[i] = 1; });
+    box.appendChild(h("div", { "class": "tabs", role: "group", "aria-label": "Record type" }, kinds.map(function (k) {
+      var n = recs.filter(function (r) { return r.kind === k; }).length;
+      return h("button", { type: "button", "class": "chip", "aria-pressed": String(k === state.tab), onclick: function () { state.tab = k; renderEvidence(a); } }, KIND_LABEL[k], h("small", { text: n }));
+    })));
+    if (res) box.appendChild(h("p", { "class": "banner" }, h("span", null, "Highlighted: the " + res.evidence.length + " records behind " + res.id + " " + res.title + "."),
+      h("button", { type: "button", "class": "link", text: "Clear", onclick: function () { state.sel = null; renderScoreMarks(); renderEvidence(a); } })));
+    var rows = recs.filter(function (r) { return r.kind === state.tab; });
+    var keys = [];
+    rows.forEach(function (r) { Object.keys(r.fields).forEach(function (k) { if (keys.indexOf(k) < 0) keys.push(k); }); });
+    box.appendChild(h("div", { "class": "scroll maxh" }, h("table", null,
+      h("caption", { "class": "sr", text: KIND_LABEL[state.tab] }),
+      h("thead", null, h("tr", null, h("th", { text: "Id" }), h("th", { text: "Date" }), keys.map(function (k) { return h("th", { "class": k === "amount" || k === "price" ? "n" : "", text: k.replace(/_/g, " ") }); }), h("th", { text: "Links" }))),
+      h("tbody", null, rows.map(function (r) {
+        var mine = (state.added[cur().id] || []).indexOf(r) >= 0;
+        return h("tr", { "class": hits[r.id] ? "hit" : "" },
+          h("td", { "class": "id" }, r.id, mine ? h("span", { "class": "badge", text: "added" }) : null),
+          h("td", { text: dlabel(r.ts.slice(0, 10)) }),
+          keys.map(function (k) { return h("td", { "class": (k === "text" || k === "caption" || k === "item" ? "txt " : "") + (k === "amount" || k === "price" ? "n" : "") }, k in r.fields ? cell(k, r.fields[k]) : ""); }),
+          h("td", { text: r.links.map(function (l) { return E.REL_PHRASES[l.rel] + " " + l.to; }).join("; ") }));
+      })))));
+  }
+
+  /* ---------- add data ---------- */
+  function buildAddForm() {
+    var e = cur(), form = document.getElementById("addForm"), kind = e.new_booking.kind;
+    form.textContent = "";
+    document.getElementById("addLive").textContent = "";
+    var channels = Object.keys(e.records.reduce(function (o, r) { if (r.kind === "booking") o[r.fields.channel] = 1; return o; }, {}));
+    function sel(id, label, opts) {
+      return h("label", { "class": "fl", "for": id }, label, h("select", { id: id }, opts.map(function (o) { return h("option", { value: o[0], text: o[1] }); })));
+    }
+    document.getElementById("addLede").textContent = kind === "woodworking"
+      ? "Log a booking for the day shown above. The seat count, the channel breakdown and the call all recompute."
+      : "Log a pre-order for the day shown above. The order count, revenue and the call all recompute.";
+    form.appendChild(kind === "woodworking"
+      ? sel("fBand", "Age band", [["7-10", "Ages 7 to 10, $75"], ["11+", "Ages 11 and up, $50"]])
+      : sel("fPrice", "Price tested", [["29", "$29 a month"], ["39", "$39 a month"]]));
+    form.appendChild(sel("fChan", "Where they came from", channels.map(function (c) { return [c, c.replace(/_/g, " ")]; })));
+    if (kind === "woodworking") form.appendChild(sel("fSes", "Session", [["S1", "Session 1, Nov 7"], ["S2", "Session 2, Nov 8"]]));
+    form.appendChild(h("label", { "class": "check" }, h("input", { type: "checkbox", id: "fPaid", checked: true }), "Paid"));
+    form.appendChild(h("div", { "class": "btnrow" },
+      h("button", { type: "submit", "class": "btn", text: kind === "woodworking" ? "Add booking" : "Add pre-order" }),
+      h("button", { type: "button", "class": "btn alt", text: "Reset sample data", onclick: function () { state.added[e.id] = []; document.getElementById("addLive").textContent = "Sample data restored."; render(); } })));
+    form.onsubmit = function (ev) {
+      ev.preventDefault();
+      var before = analysis(), list = (state.added[e.id] = state.added[e.id] || []);
+      var all = allRecords(), nb = all.filter(function (r) { return r.kind === "booking"; }).length;
+      var prefix = kind === "woodworking" ? "F" : "C", code = prefix + String(nb + 1).padStart(2, "0");
+      var fields = kind === "woodworking"
+        ? { family_code: code, band: val_("fBand"), price: val_("fBand") === "7-10" ? 75 : 50, paid: chk("fPaid"), channel: val_("fChan"), session: val_("fSes"), known_family: false }
+        : { family_code: code, price: Number(val_("fPrice")), paid: chk("fPaid"), channel: val_("fChan"), session: "launch" };
+      var post = e.records.filter(function (r) { return r.kind === "post" && r.fields.channel === fields.channel; })[0];
+      if (post) fields.post = post.id;
+      var links = [{ rel: "for_session", to: fields.session }, { rel: "by_family", to: code }].concat(post ? [{ rel: "produced_by", to: post.id }] : []);
+      var id = "BKG-" + String(nb + 1).padStart(3, "0");
+      list.push({ id: id, kind: "booking", experiment_id: e.id, ts: state.asof + "T12:00:00", fields: fields, links: links });
+      var after = analysis(), first = after.results.filter(function (r) { return "op" in hyp(r.id) && r.id === eligible()[0].id; })[0];
+      var b1 = before.results.filter(function (r) { return r.id === first.id; })[0];
+      var msg = h("span", null, h("b", { text: "Added " + id + " (" + code + ", " + (fields.paid ? "paid" : "not paid") + "). " }),
+        first.title + " went from " + val(b1.value, hyp(first.id).metric) + " to " + val(first.value, hyp(first.id).metric) + ". ",
+        before.decision.outcome === after.decision.outcome ? "The call is still " + after.decision.outcome.toUpperCase() + "." : "The call moved from " + before.decision.outcome.toUpperCase() + " to " + after.decision.outcome.toUpperCase() + ".");
+      state.tab = "booking"; state.sel = null;
+      render();
+      var live = document.getElementById("addLive"); live.textContent = ""; live.appendChild(msg);
+    };
+    function val_(id) { return document.getElementById(id).value; }
+    function chk(id) { return document.getElementById(id).checked; }
+  }
+
+  /* ---------- ask ---------- */
+  var MEMORY = { observation: 1, decision: 1, learning: 1 };
+  function highlight(text, words) {
+    var out = [], re = words.length ? new RegExp("(" + words.map(function (w) { return w.replace(/[^a-z0-9]/g, ""); }).join("|") + ")", "ig") : null;
+    if (!re) return [text];
+    text.split(re).forEach(function (part, i) { out.push(i % 2 ? h("mark", { text: part }) : part); });
+    return out;
+  }
+  function renderAsk() {
+    var q = state.ask, box = document.getElementById("hits");
+    box.textContent = "";
+    if (!q) return;
+    var found = E.searchRecords(visible(), q, 5);
+    if (!found.length) { box.appendChild(h("p", { text: "No matching records as of " + dlabel(state.asof) + ". Try a different word, or move the date forward." })); return; }
+    found.forEach(function (f) {
+      var r = f.record, body = f.doc.split("\n").slice(4).join("\n").trim();
+      box.appendChild(h("div", { "class": "hit-card" + (MEMORY[r.kind] ? " mem" : "") },
+        h("div", { "class": "hit-head" }, h("b", { text: r.id }), h("span", { "class": "tag", text: MEMORY[r.kind] ? "memory" : "knowledge" }), h("span", { text: dlabel(r.ts.slice(0, 10)) + ", matches " + f.hits + " of " + f.words.length + " words" })),
+        h("p", null, highlight(body, f.words))));
+    });
+  }
+  function buildAsk() {
+    var ex = document.getElementById("askEx");
+    ex.textContent = "";
+    cur().ask_examples.forEach(function (t) {
+      ex.appendChild(h("button", { type: "button", "class": "chip", text: t, onclick: function () { document.getElementById("askQ").value = t; state.ask = t; renderAsk(); } }));
+    });
+    document.getElementById("askQ").placeholder = cur().ask_examples[0];
+    document.getElementById("askForm").onsubmit = function (ev) { ev.preventDefault(); state.ask = document.getElementById("askQ").value.trim(); renderAsk(); };
+  }
+
+  /* ---------- message ---------- */
+  function bold(text) {
+    return text.split(/\*\*(.+?)\*\*/).map(function (p, i) { return i % 2 ? h("b", { text: p }) : p; });
+  }
+  function renderMd(text) {
+    var out = h("div", { "class": "md" });
+    text.split("\n").forEach(function (ln) {
+      if (!ln.trim()) return;
+      if (ln.indexOf("## ") === 0) out.appendChild(h("h4", null, bold(ln.slice(3))));
+      else if (ln.indexOf("# ") === 0) out.appendChild(h("h3", null, bold(ln.slice(2))));
+      else if (ln.indexOf("- ") === 0) out.appendChild(h("div", { "class": "li" }, bold(ln.slice(2))));
+      else out.appendChild(h("p", null, bold(ln)));
+    });
+    return out;
+  }
+  function renderMon(a) {
+    var tabs = document.getElementById("monTabs"), box = document.getElementById("mon"), c = cur().charter;
+    tabs.textContent = "";
+    [["review", "Weekly review"], ["conclusion", "Conclusion draft"]].forEach(function (t) {
+      tabs.appendChild(h("button", { type: "button", "class": "chip", "aria-pressed": String(state.mon === t[0]), text: t[1], onclick: function () { state.mon = t[0]; renderMon(a); } }));
+    });
+    box.textContent = "";
+    box.appendChild(renderMd(state.mon === "review" ? E.weeklyReview(c, a.recs, state.asof) : E.conclusionReport(c, a.recs, state.asof).report));
+  }
+
+  /* ---------- orchestration ---------- */
+  function render() {
+    var a = analysis();
+    paintRuler(); renderVerdict(a); renderScore(a); renderChart(); renderEvidence(a); renderMon(a); renderAsk();
+  }
+  function selectExp(i) {
+    state.exp = i; state.asof = cur().default_asof; state.sel = null; state.chartHyp = cur().chart_default; state.tab = "booking"; state.ask = "";
+    document.getElementById("askQ").value = "";
+    buildHeader(); buildRuler(); buildAddForm(); buildAsk(); render();
+  }
+  window.addEventListener("resize", (function () { var t; return function () { clearTimeout(t); t = setTimeout(renderChart, 120); }; })());
+  bindRuler();
+  selectExp(0);
+})();
+</script>
+</body>
+</html>
